@@ -1,0 +1,37 @@
+﻿@page "/ConsultarSerivicios"
+
+@using Entidades
+@using Microsoft.Extensions.Options
+@using Tutorial_v2.ConsumirServicios
+@inject IOptions<Token> AppSettings
+
+  <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Fecha</th>
+                <th>Valor</th>
+                <th>Tipo</th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (TipoCambio item in Tipo_Cambio)
+            {
+                <tr>
+                    <td>@item.FecPublica</td>
+                    <td>@item.ValTipo</td>
+                    <td>@item.CodTipo</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+<h3>ConsultarServiciosAPI</h3>
+    <Button Color="ButtonColor.Success" @onclick="ObtenerTipoCambio"> Obtener Tipo Cambio</Button>
+
+@code {
+    public List<TipoCambio> Tipo_Cambio = new List<TipoCambio>();
+    async Task ObtenerTipoCambio()
+    {
+        TipoCambioResponse TipoCambio = await new MiAPIDataStore(@AppSettings.Value.TokenSegurida).Consultar_TipoCambio();
+        Tipo_Cambio = TipoCambio.Data;
+    }
+}

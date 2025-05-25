@@ -1,3 +1,4 @@
+using Entidades;
 using QuestPDF.Infrastructure;
 using Tutorial_v2.Components;
 
@@ -7,6 +8,7 @@ builder.Services.AddBlazorBootstrap();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 QuestPDF.Settings.License = LicenseType.Community;
+builder.Services.Configure<Token>(builder.Configuration.GetSection("Token"));
 
 var app = builder.Build();
 
