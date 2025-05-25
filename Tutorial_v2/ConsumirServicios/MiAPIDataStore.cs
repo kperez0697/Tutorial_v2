@@ -7,7 +7,6 @@ namespace Tutorial_v2.ConsumirServicios
     public class MiAPIDataStore
     {
         private readonly HttpClient _http;
-        //private readonly IConfiguration configuration;
         public MiAPIDataStore(string token)
         {
             _http = new HttpClient();

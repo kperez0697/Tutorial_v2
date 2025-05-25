@@ -61,7 +61,7 @@ Responsive="true">
                 messages.Add(mensanje);
                 return;
             }
-            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+            ExcelPackage.License.SetNonCommercialOrganization("My Noncommercial organization");
             using (var Package = new ExcelPackage())
             {
                 var worksheet = Package.Workbook.Worksheets.Add("sheet");
@@ -148,7 +148,7 @@ Responsive="true">
         List<Personal> ListaExcel = new List<Personal>();
         using (var package = new OfficeOpenXml.ExcelPackage(stream))
         {
-            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+            ExcelPackage.License.SetNonCommercialOrganization("My Noncommercial organization");
             var worksheet = package.Workbook.Worksheets[0]; // Lee la primera hoja del archivo
             int rowCount = worksheet.Dimension.Rows;
 

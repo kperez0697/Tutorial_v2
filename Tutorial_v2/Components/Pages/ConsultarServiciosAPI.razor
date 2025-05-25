@@ -32,6 +32,7 @@
     async Task ObtenerTipoCambio()
     {
         TipoCambioResponse TipoCambio = await new MiAPIDataStore(@AppSettings.Value.TokenSegurida).Consultar_TipoCambio();
+        if (TipoCambio == null) return;
         Tipo_Cambio = TipoCambio.Data;
     }
 }
