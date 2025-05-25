@@ -1,0 +1,153 @@
+﻿@page "/ExportarPDF"
+@using Entidades
+@using QuestPDF.Fluent
+@using QuestPDF.Helpers
+@using System.Globalization
+@inject IJSRuntime js;
+
+<Button Color="ButtonColor.Primary" @onclick="DescargaPDF"> Descargar PDF</Button>
+<Toasts class="p-3" AutoHide=true Messages="messages" Placement="ToastsPlacement.TopRight" />
+
+@code {
+    private List<Personal> ListaPersonal = new List<Personal>();
+    List<ToastMessage> messages = new List<ToastMessage>();
+    DateTime fecha = new DateTime();
+    protected async override Task OnInitializedAsync()
+    {
+        ListaPersonal.Add(new Personal { Nombre = "Alejandro", Salario = 2600 });
+        ListaPersonal.Add(new Personal { Nombre = "Maria", Salario = 5000 });
+        ListaPersonal.Add(new Personal { Nombre = "Martin", Salario = 10000 });
+        fecha = DateTime.Today;
+    }
+    async Task DescargaPDF()
+    {
+        try
+        {
+            if (ListaPersonal.Count() == 0)
+            {
+                ToastMessage mensanje = new ToastMessage();
+                mensanje.Type = ToastType.Warning;
+                mensanje.Message = "No existen registros";
+                messages.Add(mensanje);
+                return;
+            }
+            var data = Document.Create(document =>
+             {
+                 document.Page(page =>
+                 {
+                     page.Size(PageSizes.A4);
+                     page.Margin(5);
+                     //page.DefaultTextStyle(x => x.FontSize(12));
+
+                     page.Header().Row(row =>//CABECERA
+                    {
+                        row.RelativeItem().Column(colum =>
+                        {
+                            // colum.Item().AlignCenter().Height(70).Width(200).Image(filtro.ContratoCab.Logo); SE PUEDE AGREGAR UNA IMAGEN
+                            colum.Item().AlignCenter().Text("Dirección: **** telf.: ** / **").FontSize(7);
+                            colum.Item().AlignCenter().Text(text =>
+                            {
+                                text.Span("Correo: ").FontSize(7);
+                                text.Span("SI QUIERES SUBRAYAR EL TEXTO").FontSize(7).Underline().FontColor(Colors.Blue.Accent1);
+                                text.Span("Y QUE SIGA CONCATENADO").FontSize(7).Underline().FontColor(Colors.Blue.Accent1);
+                            });
+                        });
+                        row.ConstantItem(200).AlignLeft().Column(col =>
+                        {
+                            col.Item().Text("TEXTO 1").Bold().FontSize(7);
+                            col.Item().Text("TEXTO 2").FontSize(7);
+                            col.Item().Text("TEXTO 3").FontSize(7);
+                        });
+                    });
+                     page.Content().PaddingVertical(9).Grid(grid =>
+                    {
+                     grid.Item(12).PaddingTop(9).Text(text =>
+                     {
+                         text.Justify();
+                         text.Span("Si quieres concatenar texto ").FontSize(9);
+                         text.Span("con texto en negritas ").Bold().FontSize(9);
+                         text.Span("sigue esta logica ").FontSize(9);
+                     });
+                     grid.Item(12).PaddingTop(9).Text(text =>
+                     {
+                         text.Justify();
+                         text.Span("Siguiente parrafo:").Underline().Bold().FontSize(9);
+                         text.Span("Contatenar").Bold().FontSize(9);
+                     });
+
+                     grid.Item(12).PaddingTop(9).Table(table => //UNA TABLA
+                     {
+                         table.ColumnsDefinition(columns =>
+                         {
+                             columns.RelativeColumn(); // COLUMNA 1
+                             columns.RelativeColumn();  // COLUMNA 2
+                         });
+
+                         // Encabezados
+                         table.Header(header =>
+                         {
+                             header.Cell().Border(1).Background("#D3D3D3").Padding(3).Text("NOMBRE COLUMA 1").Bold().FontSize(9).AlignCenter();
+                             header.Cell().Border(1).Background("#D3D3D3").Padding(3).Text("NOMBRE COLUMA 2").Bold().FontSize(9).AlignCenter();
+                         });
+
+                         // Datos
+                         foreach (var item in ListaPersonal)
+                         {
+                             table.Cell().Border(1).AlignCenter().Padding(3).Text(item.Nombre).FontSize(9);
+                             table.Cell().Border(1).Padding(3).Text(item.Salario.ToString("N2")).FontSize(9);
+                         }
+
+                         // Totales
+                         table.Cell().ColumnSpan(2).Text("");
+                         table.Cell().Text("TOTAL").Bold().FontSize(9).FontColor("#FF0000");
+                         table.Cell().Border(1).AlignCenter().Text($"S/. {ListaPersonal.Sum(x=>x.Salario):N2}").FontSize(9);
+                     });
+                     grid.Item(12).PaddingTop(9).Text(text =>
+                     {
+                         text.Justify();
+                         text.Span("OTRO PARRAFO: ").Underline().Bold().FontSize(9);
+                         text.Span("EN NEGRITAS ").Bold().FontSize(9);
+                     });
+                     
+                    
+                     grid.Item(12).PaddingTop(9).Text(text =>// 
+                     {
+                         text.Justify();
+                         text.Span("OTRO PARRAFO: TEXTO JUSTIFICADO ").Underline().Bold().FontSize(9);
+                         text.Span("Tiempo de lectura: 9 minutos El texto argumentativo es uno de los tipos más abordados en la escuela, eso porque despierta la capacidad de expresar ideas, opiniones y la posición sobre determinado tema.Este tipo de texto inncluye diferentes géneros como disertación, artículos de opinión, carta argumentativa, editorial, entre otros.El texto de caráter argumentativo busca convencer al lector sobre determinado asunto, por eso, es indispensable tener fundamentos y tener una base, o sea, un punto de vista central sobre un determinado asunto. Solamente así será posible convencer al interlocutor sobre tu visión.").FontSize(9);
+                     });
+                 });
+                     page.Footer().Row(row =>// PIE DE PAGINA
+                 {
+                     row.RelativeItem().Column(colum =>
+                     {
+                         colum.Item().AlignLeft().Text("PERU " + fecha.ToString("d 'de' MMMM 'del' yyyy", new CultureInfo("es-ES"))).FontSize(7);
+                         colum.Item().AlignLeft().PaddingTop(40).Text("………………………………………………………………………").FontSize(7);
+                         colum.Item().AlignLeft().PaddingLeft(50).Text("La Empresa").FontSize(7).Bold();
+                     });
+                     row.ConstantItem(250).AlignCenter().Column(colum =>
+                     {
+                         colum.Item().AlignCenter().Text("………………………………………………………………………………..").FontSize(7);
+                         colum.Item().AlignCenter().Text("El Cliente").FontSize(7).Bold();
+                     });
+                 });
+                 });
+             }).GeneratePdf();
+            using (var memoria = new MemoryStream(data))
+            {
+                await js.InvokeAsync<object>("DescargarArchivo", Convert.ToBase64String(memoria.ToArray()),
+                "application/pdf", $"PDF.pdf");
+            }
+
+        }
+        catch (Exception ex)
+        {
+            ToastMessage mensanje = new ToastMessage();
+            mensanje.Type = ToastType.Danger;
+            mensanje.Title = "Error";
+            mensanje.Message = ex.Message;
+            messages.Add(mensanje);
+            return;
+        }
+    }
+}

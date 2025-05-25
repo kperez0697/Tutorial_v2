@@ -1,0 +1,179 @@
+﻿@page "/ExportarImportarExcel"
+@using Entidades
+@using OfficeOpenXml
+@using OfficeOpenXml.Style
+@rendermode InteractiveServer
+@inject IJSRuntime js;
+<div style="padding-bottom:10px">
+    <Button Color="ButtonColor.Success" @onclick="DescargaExcel"> Descargar Excel</Button>
+    <InputFile OnChange="@UploadFiles"></InputFile>
+</div>
+<Grid TItem="Personal" @ref="grid"
+Class="table table-hover table-bordered table-striped"
+Data="ListaPersonal"
+AllowFiltering="true"
+AllowPaging="true"
+PageSize="5"
+AllowSorting="true"
+AllowSelection="true"
+SelectionMode="GridSelectionMode.Multiple"
+SelectedItemsChanged="OnSelectedItemsChanged"
+Responsive="true">
+
+    <GridColumns>
+        <GridColumn TItem="Personal" HeaderText="Nombre" PropertyName="Nombre" SortKeySelector="item => item.Nombre">
+            @context.Nombre
+        </GridColumn>
+        <GridColumn TItem="Personal" HeaderText="Salario" PropertyName="Salario" SortKeySelector="item => item.Salario">
+            @context.Salario
+        </GridColumn>
+    </GridColumns>
+
+</Grid>
+
+<Toasts class="p-3" AutoHide=true Messages="messages" Placement="ToastsPlacement.TopRight" />
+@code {
+    List<ToastMessage> messages = new List<ToastMessage>();
+    private List<Personal> ListaPersonal = new List<Personal>();
+    Grid<Personal> grid = default!;
+    private HashSet<Personal> selectedPersonal = new();
+    protected async override Task OnInitializedAsync()
+    {
+        ListaPersonal.Add(new Personal { Nombre = "Alejandro", Salario = 2600 });
+        ListaPersonal.Add(new Personal { Nombre = "Maria", Salario = 5000 });
+        ListaPersonal.Add(new Personal { Nombre = "Martin", Salario = 10000 });
+
+    }
+    private Task OnSelectedItemsChanged(HashSet<Personal> employees)
+    {
+        selectedPersonal = employees is not null && employees.Any() ? employees : new();
+        return Task.CompletedTask;
+    }
+    async Task DescargaExcel()
+    {
+        try
+        {
+            if (ListaPersonal.Count() == 0)
+            {
+                ToastMessage mensanje = new ToastMessage();
+                mensanje.Type = ToastType.Warning;
+                mensanje.Message = "No existen registros";
+                messages.Add(mensanje);
+                return;
+            }
+            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+            using (var Package = new ExcelPackage())
+            {
+                var worksheet = Package.Workbook.Worksheets.Add("sheet");
+
+                #region Cabecera
+                worksheet.Cells[1, 1].Value = "Nombre";
+                worksheet.Cells[1, 2].Value = "Salario";
+                worksheet.Cells["A1:B1"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                worksheet.Cells["A1:B1"].Style.Border.Top.Style = ExcelBorderStyle.Thin;
+                worksheet.Cells["A1:B1"].Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
+                worksheet.Cells["A1:B1"].Style.Border.Left.Style = ExcelBorderStyle.Thin;
+                worksheet.Cells["A1:B1"].Style.Border.Right.Style = ExcelBorderStyle.Thin;
+
+                worksheet.Column(1).AutoFit();
+                worksheet.Column(2).Width = 14;
+                #endregion
+
+                int row = 2;
+                foreach (var item in ListaPersonal)
+                {
+                    worksheet.Cells[row, 1].Value = item.Nombre; worksheet.Cells[row, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                    worksheet.Cells[row, 2].Value = item.Salario; worksheet.Cells[row, 2].Style.Numberformat.Format = "#,##0.00";
+                    row++;
+                }
+                worksheet.Cells[row, 2].Value = "Total General";
+                worksheet.Cells[row, 3].Formula = $"Sum(B2:E{(row - 1)})"; worksheet.Cells[row, 3].Style.Numberformat.Format = "#,##0.00";
+                worksheet.Cells["A2" + ":B" + (row - 1)].Style.Border.Top.Style = ExcelBorderStyle.Thin;
+                worksheet.Cells["A2" + ":B" + (row - 1)].Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
+                worksheet.Cells["A2" + ":B" + (row - 1)].Style.Border.Left.Style = ExcelBorderStyle.Thin;
+                worksheet.Cells["A2" + ":B" + (row - 1)].Style.Border.Right.Style = ExcelBorderStyle.Thin;
+                using (var memoria = new MemoryStream())
+                {
+                    Package.SaveAs(memoria);
+                    Package.Dispose();
+                    var nombreExcel = string.Concat("Reporte ", DateTime.Now.ToString(), ".xlsx");
+
+                    await js.InvokeAsync<object>("DescargarArchivo", Convert.ToBase64String(memoria.ToArray()),
+                    "application/vnd.ms-excel", nombreExcel);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastMessage mensanje = new ToastMessage();
+            mensanje.Type = ToastType.Danger;
+            mensanje.Title = "Error";
+            mensanje.Message = ex.Message;
+            messages.Add(mensanje);
+            return;
+        }
+    }
+    #region IMPORTAR EXCEL
+    private async Task UploadFiles(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        try
+        {
+            if (file != null)
+            {
+                using (var stream = new MemoryStream())
+                {
+                    await file.OpenReadStream().CopyToAsync(stream);
+                    stream.Position = 0;
+                    await ReadExcelFile(stream);
+                    ToastMessage mensanje = new ToastMessage();
+                    mensanje.Type = ToastType.Success;
+                    mensanje.Title = "TODO CORRECTO";
+                    messages.Add(mensanje);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastMessage mensanje = new ToastMessage();
+            mensanje.Type = ToastType.Danger;
+            mensanje.Title = "Error";
+            mensanje.Message = ex.Message;
+            messages.Add(mensanje);
+            throw;
+        }
+    }
+    public async Task ReadExcelFile(Stream stream)
+    {
+        List<Personal> ListaExcel = new List<Personal>();
+        using (var package = new OfficeOpenXml.ExcelPackage(stream))
+        {
+            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+            var worksheet = package.Workbook.Worksheets[0]; // Lee la primera hoja del archivo
+            int rowCount = worksheet.Dimension.Rows;
+
+            for (int row = 2; row <= rowCount; row++) // Comienza en la fila 2 si la fila 1 tiene encabezados
+            {
+                string nombre = worksheet.Cells[row, 1].Text?.Trim(); // Obtiene el nombre y elimina espacios
+                string salarioTexto = worksheet.Cells[row, 2].Text?.Trim(); // Obtiene el salario como string
+
+                if (!string.IsNullOrEmpty(nombre) && decimal.TryParse(salarioTexto, out decimal salario))
+                {
+                    ListaExcel.Add(new Personal
+                        {
+                            Nombre = nombre,
+                            Salario = salario
+                        });
+                }
+            }
+
+        }
+        foreach (var item in ListaExcel)
+        {
+            ListaPersonal.Add(item);
+        }
+        await grid.RefreshDataAsync();
+        base.OnInitialized();
+    }
+    #endregion
+}
