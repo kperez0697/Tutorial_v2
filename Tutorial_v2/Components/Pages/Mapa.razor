@@ -1,0 +1,74 @@
+﻿@page "/Mapa"
+@inject IJSRuntime js;
+
+<div>
+    <div class="row">
+        <div class="col-lg-2">
+            <label>Latitud: </label>
+        </div>
+        <div class="col-lg-8" style="padding-bottom:5px">
+            <TextInput @bind-Value="@latitudPrincipal" />
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-2">
+            <label>Longitud: </label>
+        </div>
+        <div class="col-lg-8" style="padding-bottom:5px">
+            <TextInput @bind-Value="@longitudPrincipal" />
+        </div>
+    </div>
+    <Button Color="ButtonColor.Success" @onclick="Actualizar_Mapa"> Actualizar Mapa</Button>
+    <Button Color="ButtonColor.Success" @onclick="Añadir_Marcador"> Añadir Marcador</Button>
+    <Button Color="ButtonColor.Success" @onclick="DibujarRuta"> Trazar Ruta</Button>
+
+    <div id="mapa" style="height: 500px; margin-top: 20px;"></div>
+
+</div>
+
+@code {
+
+    private string latitudPrincipal = "-12.047407";
+    private string longitudPrincipal = " -77.042530";
+    protected override async Task OnInitializedAsync()
+    {
+        // vm.Usuario = Usuario;
+        // vm.IdUsuarioSeguimiento = UsuarioSeguir;
+        base.OnInitialized();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)//para inicializar el mapa
+    {
+        if (firstRender)
+        {
+            double latitud = Convert.ToDouble(latitudPrincipal);
+            double longitud = Convert.ToDouble(longitudPrincipal);
+            await js.InvokeVoidAsync("inicializarMapa", "mapa", latitud, longitud);
+        }
+    }
+    async void Actualizar_Mapa() //actualizar las coordenadas puestas en los campos del TextInput 
+    {
+
+        double latitud = Convert.ToDouble(latitudPrincipal);
+        double longitud = Convert.ToDouble(longitudPrincipal);
+        await js.InvokeVoidAsync("actualizarMarcador", latitud, longitud, $"Ubicación: {latitud}, {longitud}");
+    }
+    async void Añadir_Marcador()// toma los valores del TextInput para añadir marcador
+    {
+        double latitud = Convert.ToDouble(latitudPrincipal);
+        double longitud = Convert.ToDouble(longitudPrincipal);
+        string textoPopup = $"Marcador en: {latitud}, {longitud}";
+        await js.InvokeVoidAsync("agregarMarcadorDesdeInput", latitud, longitud, textoPopup);
+
+    }
+    async void DibujarRuta()//dibuja la ruta entre lo que esta en TextInput y otras ubicacion 
+    {
+        double latitud = Convert.ToDouble(latitudPrincipal);
+        double longitud = Convert.ToDouble(longitudPrincipal);
+        double latitudFinal = -12.068039;
+        double longitudFinal= -77.034689;
+        await js.InvokeVoidAsync("trazarRutaConOSRM", latitud, longitud, latitudFinal, longitudFinal);
+        
+    }
+}
